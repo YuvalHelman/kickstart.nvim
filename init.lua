@@ -115,13 +115,13 @@ vim.keymap.set({ 'i' }, '<C-^>', '<C-o><C-^>')
 vim.keymap.set({ 'n' }, '<Leader><Space>', 'i<Space><ESC>', { desc = 'Add a Space without going into Insert Mode' })
 
 --[[ Search And Replace:
- Press * to search for the term under the cursor or a visual selection, 
+ Press * to search for the term under the cursor or a visual selection,
  then press a key below to replace all instances of it in the current file.
 --]]
-vim.keymap.set({ 'n', 'x' }, '<Leader>r', ':%s///g<Left><Left>')
+-- vim.keymap.set({ 'n', 'x' }, '<Leader>rr', ':%s///g<Left><Left>')
 vim.keymap.set({ 'n', 'x' }, '<Leader>rc', ':%s///gc<Left><Left><Left>')
 vim.keymap.set('n', 's*', [[':let @/='\<'.expand('<cword>').'\>'<CR>cgn']])
-vim.keymap.set('n', 's*', '')
+-- vim.keymap.set('n', 's*', '')
 
 vim.keymap.set('n', '<C-x>', ':close<CR>', { desc = 'close window' })
 
@@ -218,6 +218,12 @@ vim.opt.scrolloff = 10
 vim.opt.hlsearch = true
 vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
 
+-- Buffers:
+vim.keymap.set('n', '[b', vim.cmd.bprevious, { desc = 'Go to previous buffer' })
+vim.keymap.set('n', ']b', vim.cmd.bnext, { desc = 'Go to previous buffer' })
+vim.keymap.set('n', '[B', vim.cmd.bfirst, { desc = 'Go to previous buffer' })
+vim.keymap.set('n', ']B', vim.cmd.blast, { desc = 'Go to previous buffer' })
+
 -- Diagnostic keymaps
 vim.keymap.set('n', '[d', vim.diagnostic.goto_prev, { desc = 'Go to previous [D]iagnostic message' })
 vim.keymap.set('n', ']d', vim.diagnostic.goto_next, { desc = 'Go to next [D]iagnostic message' })
@@ -280,10 +286,16 @@ vim.opt.rtp:prepend(lazypath)
 --  To update plugins you can run
 --    :Lazy update
 --
+
 -- NOTE: Here is where you install your plugins.
 require('lazy').setup({
   -- NOTE: Plugins can be added with a link (or for a github repo: 'owner/repo' link).
   'tpope/vim-sleuth', -- Detect tabstop and shiftwidth automatically
+
+  'tpope/vim-fugitive',
+  'idanarye/vim-merginal',
+
+  'haya14busa/is.vim', -- Automatically clear search highlights after you move your cursor.
 
   -- NOTE: Plugins can also be added by using a table,
   -- with the first argument being the link and the following
@@ -333,20 +345,56 @@ require('lazy').setup({
   { -- Useful plugin to show you pending keybinds.
     'folke/which-key.nvim',
     event = 'VimEnter', -- Sets the loading event to 'VimEnter'
-    config = function() -- This is the function that runs, AFTER loading
-      require('which-key').setup()
+    opts = {
+      icons = {
+        -- set icon mappings to true if you have a Nerd Font
+        mappings = vim.g.have_nerd_font,
+        -- If you are using a Nerd Font: set icons.keys to an empty table which will use the
+        -- default which-key.nvim defined Nerd Font icons, otherwise define a string table
+        keys = vim.g.have_nerd_font and {} or {
+          Up = '<Up> ',
+          Down = '<Down> ',
+          Left = '<Left> ',
+          Right = '<Right> ',
+          C = '<C-…> ',
+          M = '<M-…> ',
+          D = '<D-…> ',
+          S = '<S-…> ',
+          CR = '<CR> ',
+          Esc = '<Esc> ',
+          ScrollWheelDown = '<ScrollWheelDown> ',
+          ScrollWheelUp = '<ScrollWheelUp> ',
+          NL = '<NL> ',
+          BS = '<BS> ',
+          Space = '<Space> ',
+          Tab = '<Tab> ',
+          F1 = '<F1>',
+          F2 = '<F2>',
+          F3 = '<F3>',
+          F4 = '<F4>',
+          F5 = '<F5>',
+          F6 = '<F6>',
+          F7 = '<F7>',
+          F8 = '<F8>',
+          F9 = '<F9>',
+          F10 = '<F10>',
+          F11 = '<F11>',
+          F12 = '<F12>',
+        },
+      },
 
       -- Document existing key chains
-      require('which-key').register {
-        ['<leader>c'] = { name = '[C]ode', _ = 'which_key_ignore' },
-        ['<leader>d'] = { name = '[D]ocument', _ = 'which_key_ignore' },
-        ['<leader>r'] = { name = '[R]ename', _ = 'which_key_ignore' },
-        ['<leader>s'] = { name = '[S]earch', _ = 'which_key_ignore' },
-        ['<leader>w'] = { name = '[W]orkspace', _ = 'which_key_ignore' },
-      }
-    end,
+      spec = {
+        { '<leader>c', group = '[C]ode', mode = { 'n', 'x' } },
+        { '<leader>d', group = '[D]ocument' },
+        { '<leader>r', group = '[R]ename' },
+        { '<leader>s', group = '[S]earch' },
+        { '<leader>w', group = '[W]orkspace' },
+        { '<leader>t', group = '[T]oggle' },
+        { '<leader>h', group = 'Git [H]unk', mode = { 'n', 'v' } },
+      },
+    },
   },
-
   -- NOTE: Plugins can specify dependencies.
   --
   -- The dependencies are proper plugin specifications as well - anything
@@ -354,15 +402,92 @@ require('lazy').setup({
   --
   -- Use the `dependencies` key to specify the dependencies of a particular plugin
 
+  { 'vimlab/split-term.vim' },
+
   {
     'ibhagwan/fzf-lua',
     -- optional for icon support
-    dependencies = { 'nvim-tree/nvim-web-devicons' },
+    dependencies = { 'nvim-tree/nvim-web-devicons', enabled = vim.g.have_nerd_font },
     config = function()
       -- calling `setup` is optional for customization
-      require('fzf-lua').setup {}
+      require('fzf-lua').setup {
+        winopts = {
+          fullscreen = true,
+          preview = {
+            layout = 'vertical',
+            vertical = 'down:70%',
+          },
+        },
+      }
     end,
+    keys = {
+      -- https://www.lazyvim.org/configuration/plugins#%EF%B8%8F-adding--disabling-plugin-keymaps
+      {
+        '<leader>F',
+        function()
+          require('fzf-lua').builtin {}
+        end,
+        desc = 'Fzf Lua commands',
+      },
+      {
+        '<leader>fgf',
+        function()
+          require('fzf-lua').git_files {}
+        end,
+        desc = 'Fzf Git Files',
+      },
+      {
+        '<leader>fb',
+        function()
+          require('fzf-lua').buffers {}
+        end,
+        desc = 'Fzf Git Files',
+      },
+      {
+        '<leader>fgh',
+        function()
+          require('fzf-lua').git_bcommits {}
+        end,
+        desc = 'Fzf Git Buffer History',
+      },
+      {
+        '<leader>fgr',
+        function()
+          require('fzf-lua').live_grep_resume {}
+        end,
+        desc = 'Fzf Live Grep Resume',
+      },
+      {
+        '<leader>ff',
+        function()
+          require('fzf-lua').live_grep_glob {}
+        end,
+        desc = 'Fzf Live Grep',
+      },
+      {
+        -- TODO: this doesnt work :(
+        '<leader>fjs',
+        function()
+          require('fzf-lua').live_grep_glob {
+            cmd = 'rg -g "^(?!.*.generated.(js|jsx|ts|tsx)).*.(js|jsx|ts|tsx)$" --column --line-number --no-heading --color=always --smart-case --max-columns=4096 -e',
+          }
+        end,
+        desc = 'Fzf Live Grep typescript',
+      },
+    },
   },
+
+  --     vim.keymap.set('n', '<leader>sh', builtin.help_tags, { desc = '[S]earch [H]elp' })
+  --     vim.keymap.set('n', '<leader>sk', builtin.keymaps, { desc = '[S]earch [K]eymaps' })
+  --     vim.keymap.set('n', '<leader>sf', builtin.find_files, { desc = '[S]earch [F]iles' })
+  --     vim.keymap.set('n', '<leader>ss', builtin.builtin, { desc = '[S]earch [S]elect Telescope' })
+  --     vim.keymap.set('n', '<leader>sw', builtin.grep_string, { desc = '[S]earch current [W]ord' })
+  --     vim.keymap.set('n', '<leader>sg', builtin.live_grep, { desc = '[S]earch by [G]rep' })
+  --     vim.keymap.set('n', '<leader>sd', builtin.diagnostics, { desc = '[S]earch [D]iagnostics' })
+  --     vim.keymap.set('n', '<leader>sr', builtin.resume, { desc = '[S]earch [R]esume' })
+  --     vim.keymap.set('n', '<leader>s.', builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
+  --     -- vim.keymap.set('n', '<leader><leader>', builtin.buffers, { desc = '[ ] Find existing buffers' })
+  -- New Changes
 
   -- { -- Fuzzy Finder (files, lsp, etc)
   --   'nvim-telescope/telescope.nvim',
@@ -511,82 +636,87 @@ require('lazy').setup({
       -- If you're wondering about lsp vs treesitter, you can check out the wonderfully
       -- and elegantly composed help section, `:help lsp-vs-treesitter`
 
-      --  This function gets run when an LSP attaches to a particular buffer.
-      --    That is to say, every time a new file is opened that is associated with
-      --    an lsp (for example, opening `main.rs` is associated with `rust_analyzer`) this
-      --    function will be executed to configure the current buffer
-      -- vim.api.nvim_create_autocmd('LspAttach', {  -- TODO: enable this back
-      --   group = vim.api.nvim_create_augroup('kickstart-lsp-attach', { clear = true }),
-      --   callback = function(event)
-      --     -- NOTE: Remember that Lua is a real programming language, and as such it is possible
-      --     -- to define small helper and utility functions so you don't have to repeat yourself.
-      --     --
-      --     -- In this case, we create a function that lets us more easily define mappings specific
-      --     -- for LSP related items. It sets the mode, buffer and description for us each time.
-      --     local map = function(keys, func, desc)
-      --       vim.keymap.set('n', keys, func, { buffer = event.buf, desc = 'LSP: ' .. desc })
-      --     end
-      --
-      --     -- Jump to the definition of the word under your cursor.
-      --     --  This is where a variable was first declared, or where a function is defined, etc.
-      --     --  To jump back, press <C-t>.
-      --     map('gd', require('telescope.builtin').lsp_definitions, '[G]oto [D]efinition')
-      --
-      --     -- Find references for the word under your cursor.
-      --     map('gr', require('telescope.builtin').lsp_references, '[G]oto [R]eferences')
-      --
-      --     -- Jump to the implementation of the word under your cursor.
-      --     --  Useful when your language has ways of declaring types without an actual implementation.
-      --     map('gI', require('telescope.builtin').lsp_implementations, '[G]oto [I]mplementation')
-      --
-      --     -- Jump to the type of the word under your cursor.
-      --     --  Useful when you're not sure what type a variable is and you want to see
-      --     --  the definition of its *type*, not where it was *defined*.
-      --     map('<leader>T', require('telescope.builtin').lsp_type_definitions, 'Type [D]efinition')
-      --
-      --     -- Fuzzy find all the symbols in your current document.
-      --     --  Symbols are things like variables, functions, types, etc.
-      --     map('<leader>ds', require('telescope.builtin').lsp_document_symbols, '[D]ocument [S]ymbols')
-      --
-      --     -- Fuzzy find all the symbols in your current workspace.
-      --     --  Similar to document symbols, except searches over your entire project.
-      --     map('<leader>ws', require('telescope.builtin').lsp_dynamic_workspace_symbols, '[W]orkspace [S]ymbols')
-      --
-      --     -- Rename the variable under your cursor.
-      --     --  Most Language Servers support renaming across files, etc.
-      --     map('<leader>rn', vim.lsp.buf.rename, '[R]e[n]ame')
-      --
-      --     -- Execute a code action, usually your cursor needs to be on top of an error
-      --     -- or a suggestion from your LSP for this to activate.
-      --     map('<leader>ca', vim.lsp.buf.code_action, '[C]ode [A]ction')
-      --
-      --     -- Opens a popup that displays documentation about the word under your cursor
-      --     --  See `:help K` for why this keymap.
-      --     map('K', vim.lsp.buf.hover, 'Hover Documentation')
-      --
-      --     -- WARN: This is not Goto Definition, this is Goto Declaration.
-      --     --  For example, in C this would take you to the header.
-      --     map('gD', vim.lsp.buf.declaration, '[G]oto [D]eclaration')
-      --
-      --     -- The following two autocommands are used to highlight references of the
-      --     -- word under your cursor when your cursor rests there for a little while.
-      --     --    See `:help CursorHold` for information about when this is executed
-      --     --
-      --     -- When you move your cursor, the highlights will be cleared (the second autocommand).
-      --     local client = vim.lsp.get_client_by_id(event.data.client_id)
-      --     if client and client.server_capabilities.documentHighlightProvider then
-      --       vim.api.nvim_create_autocmd({ 'CursorHold', 'CursorHoldI' }, {
-      --         buffer = event.buf,
-      --         callback = vim.lsp.buf.document_highlight,
-      --       })
-      --
-      --       vim.api.nvim_create_autocmd({ 'CursorMoved', 'CursorMovedI' }, {
-      --         buffer = event.buf,
-      --         callback = vim.lsp.buf.clear_references,
-      --       })
-      --     end
-      --   end,
-      -- })
+      -- This function gets run when an LSP attaches to a particular buffer.
+      --   That is to say, every time a new file is opened that is associated with
+      --   an lsp (for example, opening `main.rs` is associated with `rust_analyzer`) this
+      --   function will be executed to configure the current buffer
+      vim.api.nvim_create_autocmd('LspAttach', {
+        group = vim.api.nvim_create_augroup('kickstart-lsp-attach', { clear = true }),
+        callback = function(event)
+          -- NOTE: Remember that Lua is a real programming language, and as such it is possible
+          -- to define small helper and utility functions so you don't have to repeat yourself.
+          --
+          -- In this case, we create a function that lets us more easily define mappings specific
+          -- for LSP related items. It sets the mode, buffer and description for us each time.
+          local map = function(keys, func, desc)
+            vim.keymap.set('n', keys, func, { buffer = event.buf, desc = 'LSP: ' .. desc })
+          end
+
+          -- Jump to the definition of the word under your cursor.
+          --  This is where a variable was first declared, or where a function is defined, etc.
+          --  To jump back, press <C-t>.
+          map('gd', vim.lsp.buf.definition, '[G]oto [D]efinition [L]ist')
+          map('<leader>gd', function()
+            require('fzf-lua').lsp_definitions { jump_to_single_result = true }
+          end, '[G]oto [D]efinition [L]ist')
+
+          -- Find references for the word under your cursor.
+          map('gr', function()
+            require('fzf-lua').lsp_references { jump_to_single_result = true }
+          end, '[G]oto [R]eferences')
+
+          -- Jump to the implementation of the word under your cursor.
+          --  Useful when your language has ways of declaring types without an actual implementation.
+          map('gI', require('fzf-lua').lsp_implementations, '[G]oto [I]mplementation')
+
+          -- Jump to the type of the word under your cursor.
+          --  Useful when you're not sure what type a variable is and you want to see
+          --  the definition of its *type*, not where it was *defined*.
+          map('<leader>T', require('fzf-lua').lsp_typedefs, 'Type [D]efinition')
+
+          -- Fuzzy find all the symbols in your current document.
+          --  Symbols are things like variables, functions, types, etc.
+          map('<leader>ds', require('fzf-lua').lsp_document_symbols, '[D]ocument [S]ymbols')
+
+          -- Fuzzy find all the symbols in your current workspace.
+          --  Similar to document symbols, except searches over your entire project.
+          map('<leader>ws', require('fzf-lua').lsp_workspace_symbols, '[W]orkspace [S]ymbols')
+
+          -- Rename the variable under your cursor.
+          --  Most Language Servers support renaming across files, etc.
+          map('<leader>rn', vim.lsp.buf.rename, '[R]e[n]ame')
+
+          -- Execute a code action, usually your cursor needs to be on top of an error
+          -- or a suggestion from your LSP for this to activate.
+          map('<leader>ca', vim.lsp.buf.code_action, '[C]ode [A]ction')
+
+          -- Opens a popup that displays documentation about the word under your cursor
+          --  See `:help K` for why this keymap.
+          map('K', vim.lsp.buf.hover, 'Hover Documentation')
+
+          -- WARN: This is not Goto Definition, this is Goto Declaration.
+          --  For example, in C this would take you to the header.
+          map('gD', vim.lsp.buf.declaration, '[G]oto [D]eclaration')
+
+          -- The following two autocommands are used to highlight references of the
+          -- word under your cursor when your cursor rests there for a little while.
+          --    See `:help CursorHold` for information about when this is executed
+          --
+          -- When you move your cursor, the highlights will be cleared (the second autocommand).
+          local client = vim.lsp.get_client_by_id(event.data.client_id)
+          if client and client.server_capabilities.documentHighlightProvider then
+            vim.api.nvim_create_autocmd({ 'CursorHold', 'CursorHoldI' }, {
+              buffer = event.buf,
+              callback = vim.lsp.buf.document_highlight,
+            })
+
+            vim.api.nvim_create_autocmd({ 'CursorMoved', 'CursorMovedI' }, {
+              buffer = event.buf,
+              callback = vim.lsp.buf.clear_references,
+            })
+          end
+        end,
+      })
 
       -- LSP servers and clients are able to communicate to each other what features they support.
       --  By default, Neovim doesn't support everything that is in the LSP specification.
@@ -666,32 +796,56 @@ require('lazy').setup({
     end,
   },
 
-  { -- Autoformat
-    'stevearc/conform.nvim',
-    opts = {
-      notify_on_error = false,
-      format_on_save = function(bufnr)
-        -- Disable "format_on_save lsp_fallback" for languages that don't
-        -- have a well standardized coding style. You can add additional
-        -- languages here or re-enable it for the disabled ones.
-        local disable_filetypes = { c = true, cpp = true }
-        return {
-          timeout_ms = 500,
-          lsp_fallback = not disable_filetypes[vim.bo[bufnr].filetype],
-        }
-      end,
-      formatters_by_ft = {
-        lua = { 'stylua' },
-        -- Conform can also run multiple formatters sequentially
-        -- python = { "isort", "black" },
-        --
-        -- You can use a sub-list to tell conform to run *until* a formatter
-        -- is found.
-        -- javascript = { { "prettierd", "prettier" } },
-      },
-    },
-  },
+  {
+    'pmizio/typescript-tools.nvim',
+    dependencies = { 'nvim-lua/plenary.nvim', 'neovim/nvim-lspconfig' },
+    opts = {},
+    config = function()
+      -- See `:help cmp`
+      local typescript_tools = require 'typescript-tools'
 
+      typescript_tools.setup {
+        settings = {
+          -- tsserver_file_preferences = {
+          --   includeInlayParameterNameHints = 'all',
+          --   includeCompletionsForModuleExports = true,
+          --   quotePreference = 'auto',
+          -- },
+          tsserver_format_options = {
+            insertSpaceAfterConstructor = false,
+          },
+        },
+      }
+    end,
+  },
+  --
+  -- { -- Autoformat
+  --   'stevearc/conform.nvim',
+  --   opts = {
+  --     notify_on_error = false,
+  --     format_on_save = function(bufnr)
+  --       -- Disable "format_on_save lsp_fallback" for languages that don't
+  --       -- have a well standardized coding style. You can add additional
+  --       -- languages here or re-enable it for the disabled ones.
+  --       local disable_filetypes = { c = true, cpp = true }
+  --       return {
+  --         timeout_ms = 500,
+  --         lsp_fallback = not disable_filetypes[vim.bo[bufnr].filetype],
+  --       }
+  --     end,
+  --     formatters_by_ft = {
+  --       lua = { 'stylua' },
+  --       -- Conform will run the first available formatter
+  --       javascript = { 'typescript_tools', stop_after_first = true },
+  --       -- Conform can also run multiple formatters sequentially
+  --       -- python = { "isort", "black" },
+  --       --
+  --       -- You can use a sub-list to tell conform to run *until* a formatter is found.
+  --       -- javascript = { { "prettierd", "prettier" } },
+  --     },
+  --   },
+  -- },
+  --
   { -- Autocompletion
     'hrsh7th/nvim-cmp',
     event = 'InsertEnter',
@@ -862,7 +1016,7 @@ require('lazy').setup({
     'nvim-treesitter/nvim-treesitter',
     build = ':TSUpdate',
     opts = {
-      ensure_installed = { 'bash', 'c', 'html', 'lua', 'markdown', 'vim', 'vimdoc', 'go', 'python', 'javascript', 'typescript', 'dockerfile' },
+      ensure_installed = { 'bash', 'c', 'html', 'lua', 'markdown', 'vim', 'vimdoc', 'go', 'python', 'javascript', 'typescript', 'dockerfile', 'c_sharp' },
       -- Autoinstall languages that are not installed
       auto_install = true,
       highlight = {
@@ -872,7 +1026,7 @@ require('lazy').setup({
         --  the list of additional_vim_regex_highlighting and disabled languages for indent.
         additional_vim_regex_highlighting = { 'ruby' },
       },
-      indent = { enable = true, disable = { 'ruby' } },
+      indent = { enable = false, disable = { 'ruby', 'typescript' } },
     },
     config = function(_, opts)
       -- [[ Configure Treesitter ]] See `:help nvim-treesitter`
