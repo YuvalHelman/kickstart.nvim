@@ -888,6 +888,14 @@ require('lazy').setup({
       local luasnip = require 'luasnip'
       luasnip.config.setup {}
 
+      -- cmp.event:on("menu_opened", function()
+      --   vim.b.copilot_suggestion_hidden = true
+      -- end)
+      --
+      -- cmp.event:on("menu_closed", function()
+      --   vim.b.copilot_suggestion_hidden = false
+      -- end)
+
       cmp.setup {
         snippet = {
           expand = function(args)
@@ -918,7 +926,7 @@ require('lazy').setup({
           -- Manually trigger a completion from nvim-cmp.
           --  Generally you don't need this, because nvim-cmp will display
           --  completions whenever it has completion options available.
-          ['<C-Space>'] = cmp.mapping.complete {},
+          ['<C-a>'] = cmp.mapping.complete {},
 
           -- Think of <c-l> as moving to the right of your snippet expansion.
           --  So if you have a snippet that's like:
@@ -943,12 +951,35 @@ require('lazy').setup({
           --    https://github.com/L3MON4D3/LuaSnip?tab=readme-ov-file#keymaps
         },
         sources = {
-          { name = 'nvim_lsp' },
-          { name = 'luasnip' },
-          { name = 'path' },
+          { name = 'copilot', group_index = 2 },
+          { name = 'nvim_lsp', group_index = 2 },
+          { name = 'path', group_index = 2 },
+          { name = 'luasnip', group_index = 2 },
         },
       }
     end,
+  },
+
+  -- {
+    -- "github/copilot.vim",
+    -- opts = {}
+  -- },
+
+  {
+    "zbirenbaum/copilot.lua",
+    -- event = { "InsertEnter", "LspAttach" },
+    opts = {
+      suggestion = { enabled = false },
+      panel = { enabled = false },
+    }
+  },
+
+  {
+    "zbirenbaum/copilot-cmp",
+    -- event = { "InsertEnter", "LspAttach" },
+    config = function ()
+      require("copilot_cmp").setup()
+    end
   },
 
   { -- You can easily change to a different colorscheme.
@@ -1042,6 +1073,16 @@ require('lazy').setup({
       --    - Treesitter + textobjects: https://github.com/nvim-treesitter/nvim-treesitter-textobjects
     end,
   },
+  {
+      'MeanderingProgrammer/render-markdown.nvim',
+      dependencies = { 'nvim-treesitter/nvim-treesitter', 'echasnovski/mini.nvim' }, -- if you use the mini.nvim suite
+      -- dependencies = { 'nvim-treesitter/nvim-treesitter', 'echasnovski/mini.icons' }, -- if you use standalone mini plugins
+      -- dependencies = { 'nvim-treesitter/nvim-treesitter', 'nvim-tree/nvim-web-devicons' }, -- if you prefer nvim-web-devicons
+      ---@module 'render-markdown'
+      ---@type render.md.UserConfig
+      opts = {},
+  },
+
 
   -- The following two comments only work if you have downloaded the kickstart repo, not just copy pasted the
   -- init.lua. If you want these files, they are in the repository, so you can just download them and
